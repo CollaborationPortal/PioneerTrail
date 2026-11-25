@@ -719,8 +719,7 @@ function updateMusicButton() {
 function syncMusic() {
   updateMusicButton();
   if (!music.el) return;
-  const onPlay = $("play-screen") && $("play-screen").classList.contains("active");
-  if (music.enabled && onPlay) {
+  if (music.enabled) {
     const playPromise = music.el.play();
     if (playPromise && playPromise.catch) playPromise.catch(() => {});
   } else {
@@ -738,6 +737,15 @@ function initMusic() {
     music.enabled = !music.enabled;
     syncMusic();
   };
+  // Browsers may block autoplay until a click; retry once on first interaction.
+  const unlock = () => {
+    if (music.enabled) syncMusic();
+    document.removeEventListener("pointerdown", unlock);
+    document.removeEventListener("keydown", unlock);
+  };
+  document.addEventListener("pointerdown", unlock);
+  document.addEventListener("keydown", unlock);
+  syncMusic();
 }
 
 function showScreen(id) {
