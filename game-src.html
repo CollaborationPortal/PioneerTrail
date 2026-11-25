@@ -591,9 +591,7 @@ h1, h2, h3 { font-family: "Fraunces", Georgia, serif; margin: 0 0 .5rem; }
       <p>In the mid-1840s, people are moving west to territory not yet organized into states. Some seek business opportunities, religious freedom, or a better life. Others chase gold in California, farmland in Oregon, or a new home in Utah.</p>
       <p class="muted">The trail is difficult, unpredictable, and full of hard work. Keep going until you reach the end!</p>
       <div class="row-actions" style="margin-top:1rem">
-        <button class="btn-primary" id="btn-start">Hit the Trail</button>
-        <button class="btn-ghost" id="btn-how" style="color:var(--ink);border-color:rgba(92,61,34,.3);background:#efe2c4">How to Play</button>
-      </div>
+        <button class="btn-primary" id="btn-start">Hit the Trail</button>      </div>
     </div>
   </div>
 </div>
@@ -2095,11 +2093,6 @@ $("btn-choose").onclick = confirmChoose;
 $("player-count").onchange = resetParty;
 $("btn-begin").onclick = startGameFromSetup;
 $("btn-replay").onclick = () => { showScreen("title-screen"); };
-$("btn-how").onclick = () => openModal({
-  title: "How to Play",
-  body: "Race to the end of the trail! Each pioneer rolls a die and moves along the trail. Follow the space you land on.\n\n🎯 Challenge spaces are quick mini-games. Win to skip the penalty, or earn supplies on a hunt.\n\n❓ STOP landmarks end your movement and ask a trivia question. Answer right for +1 supply.\n\nIf you can’t pay supplies, you lose your next turn. First to the end wins 🥇!",
-  icon: "icon_dice"
-});
 
 initArt();
 initMusic();
