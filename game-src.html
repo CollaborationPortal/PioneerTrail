@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pioneer Trail Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --soil: #3b2a1a;
+  --bark: #5c3d22;
+  --saddle: #8b5a2b;
+  --wheat: #e8c97a;
+  --cream: #f6ecd7;
+  --parchment: #f3e6c8;
+  --sage: #6b8f71;
+  --sage-deep: #3f5e46;
+  --sky: #6fa0c8;
+  --rust: #b5522a;
+  --ink: #2a1d12;
+  --card: rgba(246, 236, 215, 0.94);
+  --shadow: 0 12px 40px rgba(42, 29, 18, 0.28);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  font-family: "Nunito", system-ui, sans-serif;
+  color: var(--ink);
+  background: #1d150e center/cover fixed no-repeat;
+  background-image: linear-gradient(180deg, rgba(29,21,14,.55), rgba(29,21,14,.78)), var(--bg);
+}
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  border-radius: 999px;
+  font-weight: 800;
+  letter-spacing: .02em;
+  transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+}
+button:hover { transform: translateY(-1px); filter: brightness(1.05); }
+button:active { transform: translateY(1px); }
+button:disabled { opacity: .45; cursor: not-allowed; transform: none; filter: none; }
+.btn-primary {
+  background: linear-gradient(180deg, #d9783a, var(--rust));
+  color: #fff8ef;
+  padding: .85rem 1.4rem;
+  box-shadow: 0 8px 0 #7a3418;
+}
+.btn-secondary {
+  background: linear-gradient(180deg, #8faf87, var(--sage-deep));
+  color: #f4fff4;
+  padding: .75rem 1.2rem;
+  box-shadow: 0 6px 0 #2a4030;
+}
+.btn-ghost {
+  background: rgba(255,248,235,.18);
+  color: var(--cream);
+  border: 2px solid rgba(246,236,215,.45);
+  padding: .7rem 1.1rem;
+}
+#music-toggle {
+  position: fixed;
+  top: .85rem;
+  right: .85rem;
+  z-index: 80;
+  min-width: 7.5rem;
+  padding: .55rem .95rem;
+  background: rgba(246, 236, 215, .92);
+  color: var(--ink);
+  border: 2px solid rgba(92,61,34,.4);
+  box-shadow: 0 6px 18px rgba(42,29,18,.22);
+}
+#music-toggle[aria-pressed="false"] {
+  background: rgba(40, 28, 18, .72);
+  color: var(--cream);
+  border-color: rgba(246,236,215,.35);
+}
+.screen { display: none; min-height: 100vh; padding: 1.25rem; }
+.screen.active { display: block; animation: rise .45s ease; }
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.panel {
+  background: var(--card);
+  border: 3px solid rgba(92,61,34,.35);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  padding: 1.25rem;
+}
+h1, h2, h3 { font-family: "Fraunces", Georgia, serif; margin: 0 0 .5rem; }
+.muted { color: #6d563d; }
+
+/* Title */
+#title-screen {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+#title-screen.active { display: flex; }
+.title-wrap { max-width: 820px; width: 100%; }
+.title-hero {
+  position: relative;
+  border-radius: 28px;
+  overflow: hidden;
+  border: 4px solid rgba(246,236,215,.55);
+  box-shadow: var(--shadow);
+  margin-bottom: 1.2rem;
+  max-height: min(42vh, 360px);
+}
+.title-hero img { width: 100%; height: min(42vh, 360px); display: block; object-fit: cover; object-position: center 40%; }
+.title-overlay {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  padding: 1.5rem;
+  background: linear-gradient(180deg, transparent 20%, rgba(28,18,10,.82));
+  color: #fff6e8;
+}
+.title-overlay h1 {
+  font-size: clamp(2.2rem, 7vw, 3.6rem);
+  text-shadow: 0 4px 18px rgba(0,0,0,.55);
+  line-height: 1;
+}
+.title-overlay p {
+  margin: .35rem 0 0;
+  font-size: 1.05rem;
+  white-space: nowrap;
+}
+.script-box { text-align: left; margin: 1rem 0 1.25rem; }
+.script-box p { margin: .4rem 0; line-height: 1.45; }
+.row-actions { display: flex; gap: .75rem; flex-wrap: wrap; justify-content: center; }
+
+/* Setup */
+.setup-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.15rem 1.25rem;
+  margin-top: 1rem;
+}
+@media (max-width: 820px) {
+  .setup-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.char-card {
+  background: #fff9ec;
+  border: 3px solid transparent;
+  border-radius: 18px;
+  overflow: hidden;
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+  box-shadow: 0 6px 16px rgba(42,29,18,.12);
+  color: inherit;
+  transition: border-color .15s, transform .15s;
+}
+.char-card:hover { transform: translateY(-3px); }
+.char-card.selected { border-color: var(--rust); box-shadow: 0 0 0 3px rgba(181,82,42,.25); }
+.char-card img.hero {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 4;
+  object-fit: contain;
+  object-position: center center;
+  display: block;
+  background: #efe2c4;
+}
+.char-card .body { padding: .65rem .85rem .9rem; }
+.char-card .body h3 { font-size: 1.15rem; }
+.char-card .body p { margin: .25rem 0; font-size: .86rem; line-height: 1.35; }
+.look-row {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  padding: .65rem .75rem 0;
+  background: #fff9ec;
+}
+.look-btn {
+  width: 56px; height: 56px; padding: 0; border-radius: 12px;
+  border: 3px solid transparent; overflow: hidden;
+  box-shadow: 0 2px 6px rgba(42,29,18,.15);
+  background: #efe2c4;
+}
+.look-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.look-btn:hover { transform: translateY(-1px); }
+.look-btn.active { border-color: var(--rust); }
+.look-btn:disabled { opacity: .35; }
+.badge {
+  display: inline-block;
+  background: var(--wheat);
+  color: var(--bark);
+  border-radius: 999px;
+  padding: .15rem .55rem;
+  font-size: .75rem;
+  font-weight: 800;
+}
+.player-setup { margin-top: 1rem; }
+.player-chip {
+  display: inline-flex; align-items: center; gap: .45rem;
+  background: #efe0c0; border-radius: 999px; padding: .35rem .7rem;
+  margin: .2rem; font-weight: 700; font-size: .9rem;
+  border: 3px solid transparent; cursor: pointer; color: inherit;
+}
+.player-chip:hover { filter: brightness(1.03); }
+.player-chip.editing {
+  border-color: var(--rust);
+  box-shadow: 0 0 0 2px rgba(181,82,42,.2);
+  background: #ffe4c2;
+}
+.player-chip img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
+
+/* Play layout */
+#play-screen.active {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+@media (max-width: 980px) {
+  #play-screen.active { grid-template-columns: 1fr; }
+}
+.sidebar { position: sticky; top: 1rem; display: grid; gap: .8rem; }
+.turn-panel { text-align: center; }
+.turn-panel .portrait {
+  width: min(220px, 100%);
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  object-position: center top;
+  border-radius: 16px;
+  margin: .45rem auto;
+  display: block;
+  border: 3px solid rgba(92,61,34,.35);
+  box-shadow: 0 8px 20px rgba(42,29,18,.2);
+  background: #efe2c4;
+}
+.turn-panel .choice-btns { margin-top: .75rem; }
+.stat-row { display: flex; justify-content: space-between; gap: .5rem; align-items: center; }
+.tracker {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 4px;
+  margin-top: .5rem;
+}
+.tracker span {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  background: #e7d7b4;
+  border: 2px solid #c9b48a;
+  display: grid; place-items: center;
+  font-size: .75rem; font-weight: 800; color: #7a6544;
+}
+.tracker span.on {
+  background: var(--rust); color: #fff; border-color: #8a3a1a;
+  box-shadow: 0 0 0 2px rgba(181,82,42,.25);
+}
+.board-wrap {
+  overflow: auto;
+  max-height: calc(100vh - 2.5rem);
+  padding-bottom: 1rem;
+  background-color: #e8d7b4;
+  background-image:
+    linear-gradient(180deg, rgba(246,236,215,.55), rgba(232,215,180,.42)),
+    var(--trail-map);
+  background-size: cover;
+  background-position: center;
+  border-image: none;
+}
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 780px;
+  padding: 3rem .4rem .4rem;
+}
+.board-row {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(92px, 1fr));
+  gap: 8px;
+}
+.row-gap {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 28px;
+  margin: 9px 0;
+  padding: 0 .35rem;
+  position: relative;
+  background: none;
+}
+.row-gap.right { justify-content: flex-end; }
+.row-gap.left { justify-content: flex-start; }
+.row-gap .chev {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--rust);
+  color: #fff8ef;
+  font-size: 1rem;
+  box-shadow: 0 3px 0 #7a3418;
+  margin-top: -6px;
+  z-index: 2;
+}
+.tile {
+  position: relative;
+  min-height: 108px;
+  background: rgba(255, 248, 234, .9);
+  border: 2px solid #c9ae7d;
+  border-radius: 14px;
+  padding: 1.35rem .55rem .55rem;
+  font-size: .72rem;
+  line-height: 1.25;
+  box-shadow: 0 4px 0 rgba(92,61,34,.12);
+}
+.tile .flow {
+  position: absolute;
+  top: 5px; right: 7px;
+  color: #b08955;
+  font-size: .75rem;
+  font-weight: 800;
+  opacity: .75;
+  line-height: 1;
+  z-index: 1;
+}
+.tile.rtl-flow .flow { right: auto; left: 7px; }
+.tile.start, .tile.end {
+  background: linear-gradient(180deg, #d7f0c9, #b7d9a2);
+  border-color: #6f9a5d;
+  font-weight: 800;
+  font-size: .9rem;
+  display: grid; place-items: center; text-align: center;
+  padding-top: 1.35rem;
+}
+.tile.stop {
+  background: linear-gradient(180deg, #ffe0cf, #f3b89a);
+  border-color: #c15a35;
+}
+.tile.here { outline: 3px solid var(--rust); outline-offset: 1px; }
+.tile.step-on { outline: 3px solid #d9783a; outline-offset: 2px; }
+.tile .label { font-weight: 800; color: var(--bark); margin-bottom: .2rem; font-size: .78rem; }
+.tokens {
+  position: absolute; right: 4px; bottom: 4px;
+  display: flex; gap: 3px; flex-wrap: wrap; justify-content: flex-end; max-width: 78%;
+  z-index: 3;
+}
+.tokens img {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,.28);
+  object-fit: cover; object-position: center top;
+  background: #fff;
+}
+.tokens img.p0 { box-shadow: 0 0 0 2px #b5522a; }
+.tokens img.p1 { box-shadow: 0 0 0 2px #3f5e46; }
+.tokens img.p2 { box-shadow: 0 0 0 2px #6fa0c8; }
+.tokens img.p3 { box-shadow: 0 0 0 2px #8b5a2b; }
+.flying-token {
+  position: fixed;
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,.35);
+  object-fit: cover; object-position: center top;
+  background: #fff;
+  z-index: 70;
+  pointer-events: none;
+  will-change: transform;
+}
+.flying-token.p0 { box-shadow: 0 0 0 2px #b5522a, 0 4px 12px rgba(0,0,0,.35); }
+.flying-token.p1 { box-shadow: 0 0 0 2px #3f5e46, 0 4px 12px rgba(0,0,0,.35); }
+.flying-token.p2 { box-shadow: 0 0 0 2px #6fa0c8, 0 4px 12px rgba(0,0,0,.35); }
+.flying-token.p3 { box-shadow: 0 0 0 2px #8b5a2b, 0 4px 12px rgba(0,0,0,.35); }
+
+.modal-back {
+  position: fixed; inset: 0; background: rgba(20,12,6,.55);
+  display: none; align-items: center; justify-content: center; padding: 1rem; z-index: 40;
+}
+.modal-back.show { display: flex; }
+.modal {
+  width: min(460px, 100%);
+  background: var(--cream);
+  border-radius: 20px;
+  border: 3px solid rgba(92,61,34,.35);
+  box-shadow: var(--shadow);
+  padding: 1.2rem 1.25rem;
+  text-align: center;
+}
+.modal img.icon { width: 72px; height: 72px; object-fit: cover; border-radius: 14px; margin: .4rem auto; display: block; }
+.modal img.portrait {
+  width: min(220px, 70%);
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  object-position: center top;
+  border-radius: 16px;
+  margin: .5rem auto;
+  display: block;
+  border: 3px solid rgba(92,61,34,.35);
+  box-shadow: 0 8px 20px rgba(42,29,18,.2);
+}
+.modal img.portrait[hidden] { display: none !important; }
+.dice-face {
+  width: 72px; height: 72px; margin: .6rem auto;
+  border-radius: 14px; background: #fff; border: 3px solid #8b5a2b;
+  display: grid; place-items: center;
+  font-family: "Fraunces", serif; font-size: 2rem; font-weight: 700;
+  animation: pop .35s ease;
+}
+.dice-face[hidden] { display: none !important; }
+@keyframes pop { from { transform: scale(.6) rotate(-12deg); } to { transform: none; } }
+.choice-btns { display: grid; gap: .55rem; margin-top: .9rem; }
+.choice-btns .btn-primary, .choice-btns .btn-secondary { width: 100%; }
+
+.player-list { display: grid; gap: .45rem; }
+.player-row {
+  display: grid; grid-template-columns: 40px 1fr auto; gap: .5rem; align-items: center;
+  background: #fff7e6; border-radius: 12px; padding: .4rem .5rem;
+}
+.player-row.active { outline: 2px solid var(--rust); }
+.player-row img { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; }
+.player-row .name { font-weight: 800; font-size: .9rem; }
+.player-row .meta { font-size: .75rem; color: #6d563d; }
+.won-tag { color: var(--sage-deep); font-weight: 800; font-size: .75rem; }
+
+#end-screen .panel { max-width: 640px; margin: 4vh auto; text-align: center; }
+.winner-list { display: grid; gap: .6rem; margin: 1rem 0; }
+.winner-list .player-row { text-align: left; }
+</style>
+</head>
+<body>
+<button type="button" class="btn-ghost" id="music-toggle" aria-pressed="true" title="Mute music">Music On</button>
+<audio id="bg-music" src="assets/music/campfire-loop.mp3" loop preload="auto"></audio>
+<div id="title-screen" class="screen active">
+  <div class="title-wrap">
+    <div class="title-hero">
+      <img id="title-bg" alt="Prairie trail" />
+      <div class="title-overlay">
+        <h1>Pioneer Trail</h1>
+        <p>Westward in the mid-1840s — a classroom journey of grit, luck, and supplies.</p>
+      </div>
+    </div>
+    <div class="panel script-box">
+      <h2>The Journey Begins</h2>
+      <p>In the mid-1840s, people are moving west to territory not yet organized into states. Some seek business opportunities, religious freedom, or a better life. Others chase gold in California, farmland in Oregon, or a new home in Utah.</p>
+      <p class="muted">The trail is difficult, unpredictable, and full of hard work. Keep going until you reach the end!</p>
+      <div class="row-actions" style="margin-top:1rem">
+        <button class="btn-primary" id="btn-start">Hit the Trail</button>
+        <button class="btn-ghost" id="btn-how" style="color:var(--ink);border-color:rgba(92,61,34,.3);background:#efe2c4">How to Play</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="setup-screen" class="screen">
+  <div class="panel" style="max-width:1280px;margin:0 auto">
+    <h2>Gather Your Party</h2>
+    <p class="muted">Choose 1–4 pioneers. Pick a character and appearance, then press <strong>Choose</strong> to lock it in. Starting supplies come from the character. The computer acts as banker.</p>
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin:.8rem 0">
+      <label for="player-count"><strong>Players:</strong></label>
+      <select id="player-count" style="font:inherit;padding:.4rem .7rem;border-radius:10px;border:2px solid #c9ae7d;background:#fff9ec">
+        <option value="1">1 pioneer</option>
+        <option value="2" selected>2 pioneers</option>
+        <option value="3">3 pioneers</option>
+        <option value="4">4 pioneers</option>
+      </select>
+    </div>
+    <div id="party-chips" class="player-setup"></div>
+    <p id="pick-hint" class="muted" style="margin-top:.8rem"></p>
+    <div id="char-grid" class="setup-grid"></div>
+    <div class="row-actions" style="margin-top:1.2rem;justify-content:flex-end">
+      <button class="btn-ghost" id="btn-back-title" style="color:var(--ink);border-color:rgba(92,61,34,.3);background:#efe2c4">Back</button>
+      <button class="btn-secondary" id="btn-choose" type="button" disabled>Choose</button>
+      <button class="btn-primary" id="btn-begin" disabled>Play Game</button>
+    </div>
+  </div>
+</div>
+
+<div id="play-screen" class="screen">
+  <aside class="sidebar">
+    <div class="panel">
+      <div class="player-list" id="player-list"></div>
+    </div>
+    <div class="panel turn-panel" id="turn-panel">
+      <h3 id="turn-title">Your Turn</h3>
+      <img class="portrait" id="turn-portrait" alt="" />
+      <p id="turn-body" class="muted" style="margin:.35rem 0 .4rem;font-size:.9rem"></p>
+      <div class="dice-face" id="turn-dice" hidden>1</div>
+      <div class="choice-btns">
+        <button class="btn-primary" id="turn-roll" type="button">Roll Dice</button>
+      </div>
+    </div>
+  </aside>
+  <div class="board-wrap panel">
+    <div class="board" id="board"></div>
+  </div>
+</div>
+
+<div id="end-screen" class="screen">
+  <div class="panel">
+    <img id="end-art" alt="" style="width:100%;max-height:220px;object-fit:cover;border-radius:16px;margin-bottom:.8rem" />
+    <h2 id="end-title">Trail’s End</h2>
+    <p id="end-msg" class="muted"></p>
+    <div class="winner-list" id="winner-list"></div>
+    <div class="row-actions">
+      <button class="btn-primary" id="btn-replay">Play Again</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-back" id="modal">
+  <div class="modal">
+    <h3 id="modal-title">Event</h3>
+    <img class="portrait" id="modal-portrait" alt="" hidden />
+    <img class="icon" id="modal-icon" alt="" />
+    <div class="dice-face" id="modal-dice" hidden>1</div>
+    <p id="modal-body"></p>
+    <div class="choice-btns" id="modal-actions"></div>
+  </div>
+</div>
+
+<script>
+/* ASSETS_PLACEHOLDER */
+
+const CHARACTERS = [
+  {
+    id: "farmer",
+    name: "The Farmer",
+    supplies: 2,
+    from: "Independence, Missouri",
+    to: "Oregon",
+    story: "A poor farmer from Kentucky heading west for 160 acres of free land.",
+    fact: "The Homestead Act of 1862, signed by President Lincoln, later offered free land to settlers.",
+    looks: [
+      { id: "m", label: "Man", img: "char_farmer" },
+      { id: "f", label: "Woman", img: "char_farmer_f" },
+      { id: "e", label: "Latino man", img: "char_farmer_e" },
+      { id: "ef", label: "Latina woman", img: "char_farmer_ef" }
+    ]
+  },
+  {
+    id: "gold",
+    name: "The Gold Seeker",
+    supplies: 1,
+    from: "Independence, Missouri",
+    to: "California",
+    story: "You’ve heard of fist-sized gold nuggets in California. Resources are scarce — hard work is not.",
+    fact: "“Forty-niners” came from the Eastern U.S., Europe, Latin America, China, and Australia.",
+    looks: [
+      { id: "m", label: "Man", img: "char_gold" },
+      { id: "f", label: "Woman", img: "char_gold_f" },
+      { id: "e", label: "Chinese man", img: "char_gold_e" },
+      { id: "ef", label: "Chinese woman", img: "char_gold_ef" }
+    ]
+  },
+  {
+    id: "blacksmith",
+    name: "The Blacksmith",
+    supplies: 2,
+    from: "St. Louis, Missouri",
+    to: "California",
+    story: "A young blacksmith from Ohio seeking wealth and opportunity in the West.",
+    fact: "Many travelers started businesses like blacksmithing to support the miners.",
+    looks: [
+      { id: "m", label: "Man", img: "char_blacksmith" },
+      { id: "f", label: "Woman", img: "char_blacksmith_f" },
+      { id: "e", label: "Black man", img: "char_blacksmith_e" },
+      { id: "ef", label: "Black woman", img: "char_blacksmith_ef" }
+    ]
+  },
+  {
+    id: "business",
+    name: "The Wealthy Merchant",
+    supplies: 5,
+    from: "Independence, Missouri",
+    to: "Oregon",
+    story: "You sold your house, bought a fancy wagon, and plan to open a new store in Oregon.",
+    fact: "Several members of the Donner Party were well-to-do travelers heading west.",
+    looks: [
+      { id: "m", label: "Man", img: "char_business" },
+      { id: "f", label: "Woman", img: "char_business_f" },
+      { id: "e", label: "Afro-Caribbean man", img: "char_business_e" },
+      { id: "hf", label: "Hispanic woman", img: "char_business_hf" }
+    ]
+  },
+  {
+    id: "religious",
+    name: "The Religious Pioneer",
+    supplies: 3,
+    from: "Nauvoo, Illinois",
+    to: "Salt Lake City",
+    story: "You are moving your family west to join your church community.",
+    fact: "Mormon pioneers began leaving for the West in 1846.",
+    looks: [
+      { id: "m", label: "Man", img: "char_religious" },
+      { id: "f", label: "Woman", img: "char_religious_f" },
+      { id: "e", label: "Indigenous guide", img: "char_religious_e" },
+      { id: "h", label: "Hispanic man", img: "char_religious_h" }
+    ]
+  },
+  {
+    id: "german",
+    name: "The Immigrant Rancher",
+    supplies: 2,
+    from: "New Orleans",
+    to: "Texas",
+    story: "A recent immigrant hoping to start a cattle ranch on cheap land in Texas.",
+    fact: "German immigrants settled towns like New Braunfels and Fredericksburg in the 1840s.",
+    looks: [
+      { id: "m", label: "German man", img: "char_german" },
+      { id: "f", label: "German woman", img: "char_german_f" },
+      { id: "e", label: "Tejano rancher", img: "char_german_e" },
+      { id: "h", label: "Hispanic man", img: "char_german_h" }
+    ]
+  }
+];
+
+/** Board spaces in path order. stop=true means mandatory halt if you would pass it. */
+const BOARD = [
+  { id:0,  name:"Start", text:"Start your journey.", kind:"start" },
+  { id:1,  name:"River crossing", text:"Pay 3 supplies or lose 1 turn.", kind:"choice",
+    choices:[
+      { label:"Pay 3 supplies", need:3, effect:{ pay:3 } },
+      { label:"Lose 1 turn", effect:{ skip:1 } }
+    ]},
+  { id:2,  name:"Successful hunting trip", text:"Gain 2 supplies.", kind:"event", effect:{ gain:2 } },
+  { id:3,  name:"Trade with Native Americans", text:"Pay 1 supply for goods.", kind:"event", effect:{ pay:1 } },
+  { id:4,  name:"Successful hunting trip", text:"Move forward 3 spaces.", kind:"event", effect:{ forward:3 } },
+  { id:5,  name:"Bad water", text:"Pay 1 supply to recover.", kind:"event", effect:{ pay:1 } },
+  { id:6,  name:"River crossing", text:"Pay 2 supplies or lose 1 turn.", kind:"choice",
+    choices:[
+      { label:"Pay 2 supplies", need:2, effect:{ pay:2 } },
+      { label:"Lose 1 turn", effect:{ skip:1 } }
+    ]},
+  { id:7,  name:"Party member died", text:"Lose 1 turn mourning.", kind:"event", effect:{ skip:1 } },
+  { id:8,  name:"Fort Kearney", text:"STOP — restock with 2 supply cards.", kind:"stop", stop:true, effect:{ gain:2 } },
+  { id:9,  name:"Successful hunting trip", text:"The prairie is generous today.", kind:"event", effect:{ gain:1 } },
+  { id:10, name:"Rainstorm", text:"Go back 1 space.", kind:"event", effect:{ back:1 } },
+  { id:11, name:"Successful hunting trip", text:"Gain 1 supply.", kind:"event", effect:{ gain:1 } },
+  { id:12, name:"Trade with Native Americans", text:"Roll again!", kind:"event", effect:{ rollAgain:true } },
+  { id:13, name:"Snowstorm", text:"Lose 1 turn or go back 4 spaces.", kind:"choice",
+    choices:[
+      { label:"Lose 1 turn", effect:{ skip:1 } },
+      { label:"Go back 4 spaces", effect:{ back:4 } }
+    ]},
+  { id:14, name:"No food on hunt", text:"Lose 2 supplies.", kind:"event", effect:{ pay:2 } },
+  { id:15, name:"Broken wheel axle", text:"Pay 2 supplies to repair.", kind:"event", effect:{ pay:2 } },
+  { id:16, name:"Chimney Rock", text:"STOP — restock with 1 supply.", kind:"stop", stop:true, effect:{ gain:1 } },
+  { id:17, name:"Good weather", text:"Roll again!", kind:"event", effect:{ rollAgain:true } },
+  { id:18, name:"Oxen wander off", text:"Lose 1 turn searching for them.", kind:"event", effect:{ skip:1 } },
+  { id:19, name:"Abandoned wagon", text:"Gain 5 supplies!", kind:"event", effect:{ gain:5 } },
+  { id:20, name:"Broken wheel", text:"Pay 1 supply.", kind:"event", effect:{ pay:1 } },
+  { id:21, name:"Successful hunting trip", text:"Gain 3 supplies.", kind:"event", effect:{ gain:3 } },
+  { id:22, name:"Bad water", text:"Go back 3 spaces.", kind:"event", effect:{ back:3 } },
+  { id:23, name:"River crossing", text:"Pay 2 supplies.", kind:"event", effect:{ pay:2 } },
+  { id:24, name:"Fort Laramie", text:"STOP — rest here until your next turn.", kind:"stop", stop:true, effect:{ skip:0 } },
+  { id:25, name:"Party member died", text:"Lose 1 turn.", kind:"event", effect:{ skip:1 } },
+  { id:26, name:"River crossing", text:"Pay 3 supplies or go back 1 space.", kind:"choice",
+    choices:[
+      { label:"Pay 3 supplies", need:3, effect:{ pay:3 } },
+      { label:"Go back 1 space", effect:{ back:1 } }
+    ]},
+  { id:27, name:"Good weather", text:"Move forward 2 spaces.", kind:"event", effect:{ forward:2 } },
+  { id:28, name:"Mountains", text:"Move half the spaces next turn (round down).", kind:"event", effect:{ halfNext:true } },
+  { id:29, name:"Replenish food", text:"Gain 2 supplies.", kind:"event", effect:{ gain:2 } },
+  { id:30, name:"Snowstorm", text:"Lose 2 turns or go back 4 spaces.", kind:"choice",
+    choices:[
+      { label:"Lose 2 turns", effect:{ skip:2 } },
+      { label:"Go back 4 spaces", effect:{ back:4 } }
+    ]},
+  { id:31, name:"Oxen dies", text:"Lose 1 turn or trade 5 supplies.", kind:"choice",
+    choices:[
+      { label:"Lose 1 turn", effect:{ skip:1 } },
+      { label:"Trade 5 supplies", need:5, effect:{ pay:5 } }
+    ]},
+  { id:32, name:"South Pass", text:"STOP — almost there! Restock with 1 supply.", kind:"stop", stop:true, effect:{ gain:1 } },
+  { id:33, name:"Met a trail guide", text:"Move forward 2 spaces.", kind:"event", effect:{ forward:2 } },
+  { id:34, name:"Bad shortcut", text:"Lose 1 turn.", kind:"event", effect:{ skip:1 } },
+  { id:35, name:"Mountains", text:"Move half the spaces next turn (round down).", kind:"event", effect:{ halfNext:true } },
+  { id:36, name:"Successful hunting trip", text:"Gain 2 supplies.", kind:"event", effect:{ gain:2 } },
+  { id:37, name:"Broken wagon bed", text:"Pay 3 supplies.", kind:"event", effect:{ pay:3 } },
+  { id:38, name:"Trade with Native Americans", text:"Gain 1 supply.", kind:"event", effect:{ gain:1 } },
+  { id:39, name:"You made it!", text:"Trail’s end — welcome west!", kind:"end" }
+];
+
+/** Visual snake layout: 5 rows × 8 cols. Even rows L→R, odd rows R→L */
+function pathToRowCol(pathIndex) {
+  const row = Math.floor(pathIndex / 8);
+  const colInRow = pathIndex % 8;
+  const ltr = row % 2 === 0;
+  const col = ltr ? colInRow : 7 - colInRow;
+  return { row, col, ltr };
+}
+
+const state = {
+  players: [],
+  current: 0,
+  selectingFor: 0,
+  draft: null,
+  cardShowcase: {},
+  characterOrder: [],
+  hoppingId: null,
+  log: []
+};
+
+const $ = (id) => document.getElementById(id);
+
+const music = {
+  enabled: true,
+  el: null
+};
+
+function updateMusicButton() {
+  const btn = $("music-toggle");
+  if (!btn) return;
+  btn.setAttribute("aria-pressed", music.enabled ? "true" : "false");
+  btn.title = music.enabled ? "Mute music" : "Play music";
+  btn.textContent = music.enabled ? "Music On" : "Music Off";
+}
+
+function syncMusic() {
+  updateMusicButton();
+  if (!music.el) return;
+  const onPlay = $("play-screen") && $("play-screen").classList.contains("active");
+  if (music.enabled && onPlay) {
+    const playPromise = music.el.play();
+    if (playPromise && playPromise.catch) playPromise.catch(() => {});
+  } else {
+    music.el.pause();
+  }
+}
+
+function initMusic() {
+  music.el = $("bg-music");
+  if (!music.el) return;
+  music.el.loop = true;
+  music.el.volume = 0.55;
+  updateMusicButton();
+  $("music-toggle").onclick = () => {
+    music.enabled = !music.enabled;
+    syncMusic();
+  };
+}
+
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  $(id).classList.add("active");
+  syncMusic();
+}
+
+function asset(key) {
+  return (window.ASSETS && window.ASSETS[key]) || "";
+}
+
+function initArt() {
+  document.body.style.setProperty("--bg", `url("${asset("bg_prairie")}")`);
+  document.body.style.setProperty("--trail-map", `url("${asset("bg_trail_map")}")`);
+  $("title-bg").src = asset("bg_prairie");
+  $("end-art").src = asset("bg_prairie");
+  $("modal-icon").src = asset("supply_sack");
+}
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function log(msg) {
+  state.log.unshift(msg);
+  state.log = state.log.slice(0, 40);
+}
+
+function openModal({ title, body, icon, dice, actions }) {
+  return new Promise(resolve => {
+    $("modal-title").textContent = title || "Event";
+    $("modal-body").textContent = body || "";
+    const portraitEl = $("modal-portrait");
+    if (portraitEl) portraitEl.hidden = true;
+    const iconEl = $("modal-icon");
+    if (icon) { iconEl.src = asset(icon); iconEl.hidden = false; }
+    else { iconEl.hidden = true; }
+    const diceEl = $("modal-dice");
+    if (dice != null) { diceEl.hidden = false; diceEl.textContent = String(dice); }
+    else { diceEl.hidden = true; }
+    const box = $("modal-actions");
+    box.innerHTML = "";
+    (actions || [{ label: "OK", value: true }]).forEach(a => {
+      const b = document.createElement("button");
+      b.className = a.secondary ? "btn-secondary" : "btn-primary";
+      b.textContent = a.label;
+      if (a.disabled) b.disabled = true;
+      b.onclick = () => { $("modal").classList.remove("show"); resolve(a.value); };
+      box.appendChild(b);
+    });
+    $("modal").classList.add("show");
+  });
+}
+
+/* ----- Setup ----- */
+function startSetup() {
+  showScreen("setup-screen");
+  resetParty();
+}
+
+function randomShowcase() {
+  state.cardShowcase = {};
+  CHARACTERS.forEach(c => {
+    const look = c.looks[Math.floor(Math.random() * c.looks.length)];
+    state.cardShowcase[c.id] = look.id;
+  });
+}
+
+function randomizeCharacterOrder() {
+  state.characterOrder = shuffle(CHARACTERS.map(c => c.id));
+}
+
+function charactersInDisplayOrder() {
+  const order = state.characterOrder.length
+    ? state.characterOrder
+    : CHARACTERS.map(c => c.id);
+  return order.map(id => CHARACTERS.find(c => c.id === id)).filter(Boolean);
+}
+
+function resetParty() {
+  const n = Number($("player-count").value);
+  state.players = Array.from({ length: n }, (_, i) => ({
+    id: i,
+    name: `Pioneer ${i + 1}`,
+    character: null,
+    supplies: 0,
+    pos: 0,
+    skip: 0,
+    halfNext: false,
+    finished: false,
+    colorClass: `p${i}`
+  }));
+  state.selectingFor = 0;
+  state.draft = null;
+  randomShowcase();
+  randomizeCharacterOrder();
+  renderSetup();
+}
+
+function ensureSelectingFor() {
+  if (state.selectingFor >= 0 && state.selectingFor < state.players.length) return;
+  const need = state.players.findIndex(p => !p.character);
+  state.selectingFor = need === -1 ? 0 : need;
+}
+
+function lookById(ch, lookId) {
+  return ch.looks.find(l => l.id === lookId) || ch.looks[0];
+}
+
+function setDraft(roleId, lookId) {
+  ensureSelectingFor();
+  const editor = state.players[state.selectingFor];
+  if (!editor) return;
+  const ch = CHARACTERS.find(c => c.id === roleId);
+  if (!ch) return;
+  const heldByOther = state.players.find(p => p.id !== editor.id && p.character && p.character.id === ch.id);
+  if (heldByOther) return;
+  const look = lookById(ch, lookId);
+  state.draft = { roleId: ch.id, lookId: look.id };
+  renderSetup();
+}
+
+function confirmChoose() {
+  ensureSelectingFor();
+  const editor = state.players[state.selectingFor];
+  if (!editor || !state.draft) return false;
+  const ch = CHARACTERS.find(c => c.id === state.draft.roleId);
+  if (!ch) return false;
+  const heldByOther = state.players.find(p => p.id !== editor.id && p.character && p.character.id === ch.id);
+  if (heldByOther) return false;
+  const look = lookById(ch, state.draft.lookId);
+  editor.character = { ...ch, img: look.img, lookId: look.id, lookLabel: look.label };
+  editor.supplies = ch.supplies;
+  editor.name = ch.name.replace(/^The /, "");
+  state.draft = null;
+  const nextNeed = state.players.findIndex(p => !p.character);
+  if (nextNeed !== -1) state.selectingFor = nextNeed;
+  renderSetup();
+  return true;
+}
+
+function lastUnsetPlayer() {
+  const unset = state.players.filter(p => !p.character);
+  return unset.length === 1 ? unset[0] : null;
+}
+
+function isLastPlayerSelecting() {
+  const last = lastUnsetPlayer();
+  return !!(last && state.selectingFor === last.id);
+}
+
+function startGameFromSetup() {
+  if (isLastPlayerSelecting() && state.draft) {
+    if (!confirmChoose()) return;
+  }
+  if (state.players.some(p => !p.character)) return;
+  beginGame();
+}
+
+function renderSetup() {
+  ensureSelectingFor();
+  const editor = state.players[state.selectingFor];
+  const draftRole = state.draft ? CHARACTERS.find(c => c.id === state.draft.roleId) : null;
+  const draftLook = draftRole ? lookById(draftRole, state.draft.lookId) : null;
+
+  const chips = $("party-chips");
+  chips.innerHTML = state.players.map((p, i) => {
+    const editing = i === state.selectingFor ? "editing" : "";
+    if (!p.character) {
+      const pending = i === state.selectingFor && draftLook
+        ? ` · picking ${draftRole.name.replace(/^The /, "")}`
+        : ": choosing…";
+      return `<button type="button" class="player-chip ${editing}" data-player="${i}">Pioneer ${i + 1}${pending}</button>`;
+    }
+    return `<button type="button" class="player-chip ${editing}" data-player="${i}"><img src="${asset(p.character.img)}" alt="" /> ${p.name}: ${p.character.name} · ${p.character.lookLabel} (${p.character.supplies} supplies)</button>`;
+  }).join("");
+
+  const allReady = state.players.every(p => p.character);
+  const lastSelecting = isLastPlayerSelecting();
+  const who = `Pioneer ${state.selectingFor + 1}`;
+  if (allReady) {
+    $("pick-hint").textContent = `${who} can change with Choose, or press Play Game.`;
+  } else if (state.draft && lastSelecting) {
+    $("pick-hint").textContent = `${who}: ${draftRole.name} · ${draftLook.label} selected — press Play Game.`;
+  } else if (state.draft) {
+    $("pick-hint").textContent = `${who}: ${draftRole.name} · ${draftLook.label} selected — press Choose to lock it in.`;
+  } else if (lastSelecting) {
+    $("pick-hint").textContent = `${who}, pick a character and appearance, then press Play Game.`;
+  } else {
+    $("pick-hint").textContent = `${who}, pick a character and appearance, then press Choose.`;
+  }
+
+  const takenByOther = new Set(
+    state.players.filter(p => p.id !== editor.id && p.character).map(p => p.character.id)
+  );
+  $("char-grid").innerHTML = charactersInDisplayOrder().map(c => {
+    const locked = takenByOther.has(c.id);
+    const isDraft = state.draft && state.draft.roleId === c.id;
+    const isMine = editor.character && editor.character.id === c.id;
+    let previewLookId = state.cardShowcase[c.id] || c.looks[0].id;
+    let activeLook = null;
+    if (isDraft) {
+      previewLookId = state.draft.lookId;
+      activeLook = state.draft.lookId;
+    } else if (isMine && !state.draft) {
+      previewLookId = editor.character.lookId;
+      activeLook = editor.character.lookId;
+    }
+    const preview = lookById(c, previewLookId).img;
+    return `<div class="char-card ${isDraft || (isMine && !state.draft) ? "selected" : ""}" data-id="${c.id}" style="${locked ? "opacity:.45;pointer-events:none" : ""}">
+      <img class="hero" src="${asset(preview)}" alt="${c.name}" />
+      <div class="look-row">
+        ${c.looks.map(l => `<button type="button" class="look-btn ${activeLook === l.id ? "active" : ""}" data-role="${c.id}" data-look="${l.id}" title="${l.label}" ${locked ? "disabled" : ""}><img src="${asset(l.img)}" alt="${l.label}" /></button>`).join("")}
+      </div>
+      <div class="body">
+        <h3>${c.name}</h3>
+        <span class="badge">${c.supplies} starting supplies</span>
+        <p>${c.story}</p>
+        <p class="muted"><strong>${c.from}</strong> → <strong>${c.to}</strong></p>
+        <p class="muted"><em>Fun fact:</em> ${c.fact}</p>
+      </div>
+    </div>`;
+  }).join("");
+
+  chips.onclick = (e) => {
+    const chip = e.target.closest("[data-player]");
+    if (!chip) return;
+    state.selectingFor = Number(chip.dataset.player);
+    const p = state.players[state.selectingFor];
+    state.draft = p.character
+      ? { roleId: p.character.id, lookId: p.character.lookId }
+      : null;
+    renderSetup();
+  };
+
+  $("char-grid").onclick = (e) => {
+    const lookBtn = e.target.closest(".look-btn");
+    if (lookBtn && !lookBtn.disabled) {
+      setDraft(lookBtn.dataset.role, lookBtn.dataset.look);
+      return;
+    }
+    const card = e.target.closest(".char-card");
+    if (!card) return;
+    const ch = CHARACTERS.find(c => c.id === card.dataset.id);
+    if (takenByOther.has(ch.id)) return;
+    const keepLook = (state.draft && state.draft.roleId === ch.id)
+      ? state.draft.lookId
+      : (state.cardShowcase[ch.id] || ch.looks[0].id);
+    setDraft(ch.id, keepLook);
+  };
+
+  $("btn-choose").hidden = lastSelecting;
+  $("btn-choose").disabled = lastSelecting || !state.draft;
+  $("btn-begin").disabled = !(allReady || (lastSelecting && state.draft));
+}
+
+function tileHTML(pathIndex) {
+  const tile = BOARD[pathIndex];
+  const { ltr } = pathToRowCol(pathIndex);
+  const here = state.players.some(p => p.pos === pathIndex);
+  const tokens = state.players.filter(p => p.pos === pathIndex);
+  const kind = tile.kind === "start" || tile.kind === "end" || tile.kind === "stop" ? tile.kind : "";
+  const flow = ltr ? "→" : "←";
+  return `<div class="tile ${kind} ${here ? "here" : ""} ${ltr ? "" : "rtl-flow"}" data-path="${pathIndex}">
+    <span class="flow" aria-hidden="true">${flow}</span>
+    <div class="label">${tile.stop ? "STOP · " : ""}${tile.name}</div>
+    <div>${tile.text}</div>
+    <div class="tokens">${tokens.map(p => `<img data-player="${p.id}" class="${p.colorClass}" src="${asset(p.character.img)}" title="${p.name}" alt="${p.name}" />`).join("")}</div>
+  </div>`;
+}
+
+/* ----- Board render ----- */
+function renderBoard() {
+  const board = $("board");
+  const rows = 5;
+  const cols = 8;
+  let html = "";
+  for (let r = 0; r < rows; r++) {
+    const ltr = r % 2 === 0;
+    const indices = [];
+    for (let c = 0; c < cols; c++) {
+      const pathIndex = r * cols + c;
+      if (pathIndex >= BOARD.length) break;
+      indices.push(pathIndex);
+    }
+    // Visual order: LTR rows left→right; RTL rows show path right→left so travel goes leftward
+    const visual = ltr ? indices : indices.slice().reverse();
+    html += `<div class="board-row" data-dir="${ltr ? "ltr" : "rtl"}">${visual.map(tileHTML).join("")}</div>`;
+    if (r < rows - 1) {
+      // After LTR row → turn on the right; after RTL row → turn on the left
+      const side = ltr ? "right" : "left";
+      html += `<div class="row-gap ${side}" aria-label="Trail continues down">
+        <span class="chev">↓</span>
+      </div>`;
+    }
+  }
+  board.innerHTML = html;
+}
+
+function renderPlayers() {
+  $("player-list").innerHTML = state.players.map((p, i) => `
+    <div class="player-row ${i === state.current && !p.finished ? "active" : ""}">
+      <img src="${asset(p.character.img)}" alt="" />
+      <div>
+        <div class="name">${p.name}</div>
+        <div class="meta">${p.finished ? "Finished!" : `${p.supplies} supplies${p.skip ? ` · skip ${p.skip}` : ""}`}</div>
+      </div>
+      <div>${p.finished ? `<span class="won-tag">Made it!</span>` : ""}</div>
+    </div>`).join("");
+}
+
+function beginGame() {
+  state.current = 0;
+  state.log = [];
+  showScreen("play-screen");
+  renderBoard();
+  renderPlayers();
+  log("The wagon train rolls out. Keep rolling until every pioneer reaches the end!");
+  prepareTurn();
+}
+
+function activePlayers() {
+  return state.players.filter(p => !p.finished);
+}
+
+async function prepareTurn() {
+  if (allFinished()) { endGame(); return; }
+  let guard = 0;
+  while (state.players[state.current].finished && guard < 12) {
+    advancePlayerIndex();
+    guard++;
+  }
+  if (allFinished()) { endGame(); return; }
+  const p = state.players[state.current];
+  renderPlayers();
+  if (p.skip > 0) {
+    await openPlayerTurn(p, "skip");
+    p.skip -= 1;
+    log(`${p.name} loses a turn.`);
+    await finishTurn();
+    return;
+  }
+  const roll = await openPlayerTurn(p, "roll");
+  await doRoll(p, roll);
+  renderBoard();
+  renderPlayers();
+  await finishTurn();
+}
+
+function openPlayerTurn(player, mode, titleOverride) {
+  return new Promise(resolve => {
+    $("turn-title").textContent = titleOverride ||
+      (mode === "skip" ? `${player.name} rests` : `${player.name}'s Turn`);
+    $("turn-portrait").src = asset(player.character.img);
+    $("turn-portrait").alt = player.name;
+    const body = $("turn-body");
+    const dice = $("turn-dice");
+    const btn = $("turn-roll");
+    dice.hidden = true;
+    btn.disabled = false;
+    if (mode === "skip") {
+      body.textContent = `${player.name} loses this turn (${player.skip} skip${player.skip > 1 ? "s" : ""} remaining after this).`;
+      btn.textContent = "Next";
+      btn.onclick = () => {
+        btn.disabled = true;
+        resolve(null);
+      };
+    } else {
+      body.textContent = titleOverride ? "Roll the die again." : "Roll the die to move along the trail.";
+      btn.textContent = "Roll Dice";
+      let result = null;
+      btn.onclick = () => {
+        if (result == null) {
+          const raw = 1 + Math.floor(Math.random() * 6);
+          let move = raw;
+          if (player.halfNext) {
+            move = Math.floor(raw / 2);
+            player.halfNext = false;
+            body.textContent = `Rolled ${raw}. Mountains cut the move to ${move}.`;
+          } else {
+            body.textContent = `Rolled ${move}. Move ${move} space${move === 1 ? "" : "s"}.`;
+          }
+          dice.hidden = false;
+          dice.textContent = String(move);
+          dice.style.animation = "none";
+          void dice.offsetWidth;
+          dice.style.animation = "";
+          result = move;
+          btn.textContent = "Continue";
+          return;
+        }
+        btn.disabled = true;
+        resolve(result);
+      };
+    }
+  });
+}
+
+function advancePlayerIndex() {
+  state.current = (state.current + 1) % state.players.length;
+}
+
+async function finishTurn() {
+  advancePlayerIndex();
+  renderBoard();
+  renderPlayers();
+  if (allFinished()) { endGame(); return; }
+  await prepareTurn();
+}
+
+function allFinished() {
+  return state.players.length > 0 && state.players.every(p => p.finished);
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/** Steps forward one space at a time; stops early on STOP or board end. */
+function pathForward(from, steps) {
+  const path = [];
+  let pos = from;
+  for (let i = 0; i < steps; i++) {
+    if (pos >= BOARD.length - 1) break;
+    pos += 1;
+    path.push(pos);
+    if (BOARD[pos].stop) break;
+  }
+  return path;
+}
+
+function pathBack(from, steps) {
+  const path = [];
+  let pos = from;
+  for (let i = 0; i < steps; i++) {
+    if (pos <= 0) break;
+    pos -= 1;
+    path.push(pos);
+  }
+  return path;
+}
+
+/** Move with STOP interception */
+function moveWithStops(from, steps) {
+  const path = pathForward(from, steps);
+  return path.length ? path[path.length - 1] : from;
+}
+
+function moveBack(from, steps) {
+  return Math.max(0, from - steps);
+}
+
+function tokenAnchorRect(tile, playerId) {
+  const token = tile.querySelector(`.tokens img[data-player="${playerId}"]`);
+  if (token && token.style.visibility !== "hidden") return token.getBoundingClientRect();
+  const tr = tile.getBoundingClientRect();
+  const size = 28;
+  return {
+    left: tr.right - 8 - size,
+    top: tr.bottom - 8 - size,
+    width: size,
+    height: size,
+    right: tr.right - 8,
+    bottom: tr.bottom - 8
+  };
+}
+
+/** Bounce one avatar from its current tile to the next. */
+async function bounceToken(player, toPos) {
+  const fromPos = player.pos;
+  const fromTile = document.querySelector(`.tile[data-path="${fromPos}"]`);
+  const toTile = document.querySelector(`.tile[data-path="${toPos}"]`);
+  if (!fromTile || !toTile) {
+    player.pos = toPos;
+    renderBoard();
+    renderPlayers();
+    return;
+  }
+
+  const size = 28;
+  const fromRect = tokenAnchorRect(fromTile, player.id);
+  const toRect = tokenAnchorRect(toTile, player.id);
+  const startX = fromRect.left + fromRect.width / 2 - size / 2;
+  const startY = fromRect.top + fromRect.height / 2 - size / 2;
+  const endX = toRect.left + toRect.width / 2 - size / 2;
+  const endY = toRect.top + toRect.height / 2 - size / 2;
+  const dx = endX - startX;
+  const dy = endY - startY;
+  const lift = Math.min(56, 28 + Math.hypot(dx, dy) * 0.18);
+
+  const fromToken = fromTile.querySelector(`.tokens img[data-player="${player.id}"]`);
+  if (fromToken) fromToken.style.visibility = "hidden";
+
+  const flyer = document.createElement("img");
+  flyer.className = `flying-token ${player.colorClass}`;
+  flyer.src = asset(player.character.img);
+  flyer.alt = player.name;
+  flyer.style.left = `${startX}px`;
+  flyer.style.top = `${startY}px`;
+  document.body.appendChild(flyer);
+
+  const anim = flyer.animate(
+    [
+      { transform: "translate(0px, 0px) scale(1)", offset: 0 },
+      { transform: `translate(${dx * 0.5}px, ${dy * 0.45 - lift}px) scale(1.18)`, offset: 0.45 },
+      { transform: `translate(${dx}px, ${dy}px) scale(1)`, offset: 1 }
+    ],
+    { duration: 420, easing: "cubic-bezier(.22,.82,.2,1)", fill: "forwards" }
+  );
+  try { await anim.finished; } catch (_) {}
+
+  flyer.remove();
+  player.pos = toPos;
+  renderBoard();
+  renderPlayers();
+  const landed = document.querySelector(`.tile[data-path="${toPos}"]`);
+  if (landed) {
+    landed.classList.add("step-on");
+    landed.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+  }
+}
+
+/** Animate avatar bouncing along each space on the trail. */
+async function animateAlong(player, path) {
+  if (!path.length) return;
+  state.hoppingId = player.id;
+  for (const pos of path) {
+    await bounceToken(player, pos);
+    await sleep(50);
+  }
+  state.hoppingId = null;
+  renderBoard();
+  renderPlayers();
+}
+
+async function applyEffect(player, effect, { chain = true } = {}) {
+  if (!effect) return;
+  if (effect.gain) {
+    player.supplies += effect.gain;
+    log(`${player.name} gains ${effect.gain} supply(ies).`);
+  }
+  if (effect.pay) {
+    const cost = effect.pay;
+    if (player.supplies >= cost) {
+      player.supplies -= cost;
+      log(`${player.name} pays ${cost} supply(ies).`);
+    } else {
+      player.skip += 1;
+      log(`${player.name} can’t pay ${cost} — loses next turn.`);
+      await openModal({
+        title: "Out of supplies!",
+        body: `${player.name} doesn’t have enough supplies and loses the next turn.`,
+        icon: "supply_sack"
+      });
+    }
+  }
+  if (effect.skip) {
+    player.skip += effect.skip;
+    log(`${player.name} will skip ${effect.skip} turn(s).`);
+  }
+  if (effect.halfNext) {
+    player.halfNext = true;
+    log(`${player.name} will move half next turn.`);
+  }
+  if (effect.back) {
+    const path = pathBack(player.pos, effect.back);
+    log(`${player.name} goes back ${effect.back}.`);
+    await animateAlong(player, path);
+  }
+  if (effect.forward && chain) {
+    const path = pathForward(player.pos, effect.forward);
+    log(`${player.name} moves forward ${path.length} space(s).`);
+    await animateAlong(player, path);
+    if (player.pos >= BOARD.length - 1) {
+      player.finished = true;
+      player.pos = BOARD.length - 1;
+      await openModal({ title: "You made it!", body: `${player.name} reached the end of the trail!`, icon: "token_wagon" });
+      return;
+    }
+    // Resolve landed tile once; don't chain further bonus moves from bonus moves
+    await resolveTile(player, { fromMoveBonus: true });
+  }
+  if (effect.rollAgain && chain) {
+    const roll = await openPlayerTurn(player, "roll", "Roll again!");
+    await doRoll(player, roll);
+  }
+}
+
+async function resolveTile(player, opts = {}) {
+  const tile = BOARD[player.pos];
+  if (tile.kind === "end" || player.pos >= BOARD.length - 1) {
+    player.finished = true;
+    player.pos = BOARD.length - 1;
+    await openModal({ title: "You made it!", body: `${player.name} reached the end of the trail!`, icon: "token_wagon" });
+    return;
+  }
+  if (tile.kind === "start") return;
+
+  if (tile.kind === "choice") {
+    const actions = tile.choices.map((c, i) => ({
+      label: c.label + (c.need && player.supplies < c.need ? " (not enough — will skip instead)" : ""),
+      value: i,
+      secondary: i > 0
+    }));
+    const pick = await openModal({
+      title: tile.name,
+      body: tile.text,
+      icon: tile.stop ? "icon_stop" : "supply_sack",
+      actions
+    });
+    let choice = tile.choices[pick];
+    // If they can't afford a pay choice, convert to skip
+    if (choice.need && player.supplies < choice.need && choice.effect.pay) {
+      await applyEffect(player, { skip: 1 });
+    } else {
+      await applyEffect(player, choice.effect, { chain: !opts.fromMoveBonus });
+    }
+    return;
+  }
+
+  await openModal({
+    title: tile.stop ? `STOP · ${tile.name}` : tile.name,
+    body: tile.text,
+    icon: tile.stop ? "icon_stop" : (tile.effect && tile.effect.gain ? "supply_sack" : "token_wagon")
+  });
+  await applyEffect(player, tile.effect, { chain: !opts.fromMoveBonus });
+}
+
+async function doRoll(player, roll) {
+  if (roll <= 0) {
+    log(`${player.name} can’t move this turn.`);
+    return;
+  }
+
+  const path = pathForward(player.pos, roll);
+  const dest = path.length ? path[path.length - 1] : player.pos;
+  log(`${player.name} rolled ${roll} and moves toward ${BOARD[dest].name}.`);
+  await animateAlong(player, path);
+
+  if (player.pos >= BOARD.length - 1) {
+    player.finished = true;
+    player.pos = BOARD.length - 1;
+    await openModal({ title: "You made it!", body: `${player.name} reached the end of the trail!`, icon: "token_wagon" });
+    return;
+  }
+  await resolveTile(player);
+}
+
+function endGame() {
+  showScreen("end-screen");
+  const winners = state.players.filter(p => p.finished);
+  $("end-title").textContent = "Pioneers Made It!";
+  $("end-msg").textContent = winners.length
+    ? `${winners.map(w => w.name).join(", ")} reached the end of the trail!`
+    : "The journey is over.";
+  $("winner-list").innerHTML = state.players.map(p => `
+    <div class="player-row">
+      <img src="${asset(p.character.img)}" alt="" />
+      <div>
+        <div class="name">${p.name} · ${p.character.name}</div>
+        <div class="meta">${p.finished ? "Reached the end" : `Stopped at space ${p.pos}`} · ${p.supplies} supplies left</div>
+      </div>
+      <div>${p.finished ? `<span class="won-tag">Success</span>` : ""}</div>
+    </div>`).join("");
+}
+
+/* Events */
+$("btn-start").onclick = startSetup;
+$("btn-back-title").onclick = () => showScreen("title-screen");
+$("btn-choose").onclick = confirmChoose;
+$("player-count").onchange = resetParty;
+$("btn-begin").onclick = startGameFromSetup;
+$("btn-replay").onclick = () => { showScreen("title-screen"); };
+$("btn-how").onclick = () => openModal({
+  title: "How to Play",
+  body: "Each pioneer rolls a die and moves along the trail. Follow the space you land on. If you can’t pay supplies, you lose your next turn. STOP landmarks end your movement. Keep going until every pioneer reaches “You made it!”",
+  icon: "icon_dice"
+});
+
+initArt();
+initMusic();
+resetParty();
+</script>
+</body>
+</html>
