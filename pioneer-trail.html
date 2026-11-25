@@ -234,6 +234,7 @@ h1, h2, h3 { font-family: "Fraunces", Georgia, serif; margin: 0 0 .5rem; }
   background: #efe2c4;
 }
 .turn-panel .choice-btns { margin-top: .75rem; }
+.turn-panel #turn-dice { margin-top: 1.4rem; margin-bottom: .2rem; }
 .stat-row { display: flex; justify-content: space-between; gap: .5rem; align-items: center; }
 .tracker {
   display: grid;
@@ -403,10 +404,25 @@ h1, h2, h3 { font-family: "Fraunces", Georgia, serif; margin: 0 0 .5rem; }
   border-radius: 14px; background: #fff; border: 3px solid #8b5a2b;
   display: grid; place-items: center;
   font-family: "Fraunces", serif; font-size: 2rem; font-weight: 700;
-  animation: pop .35s ease;
 }
 .dice-face[hidden] { display: none !important; }
-@keyframes pop { from { transform: scale(.6) rotate(-12deg); } to { transform: none; } }
+.dice-face.pips {
+  grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  padding: 9px; box-sizing: border-box;
+}
+.dice-face .pip { width: 13px; height: 13px; border-radius: 50%; place-self: center; }
+.dice-face .pip.on { background: var(--soil); }
+.dice-face.tick { animation: die-tick .12s ease; }
+.dice-face.land { animation: die-land .35s ease; }
+@keyframes die-tick {
+  from { transform: scale(.9) rotate(-14deg); }
+  to { transform: none; }
+}
+@keyframes die-land {
+  0% { transform: scale(.55) rotate(-10deg); }
+  70% { transform: scale(1.12) rotate(3deg); }
+  100% { transform: none; }
+}
 .choice-btns { display: grid; gap: .55rem; margin-top: .9rem; }
 .choice-btns .btn-primary, .choice-btns .btn-secondary { width: 100%; }
 
@@ -420,6 +436,19 @@ h1, h2, h3 { font-family: "Fraunces", Georgia, serif; margin: 0 0 .5rem; }
 .player-row .name { font-weight: 800; font-size: .9rem; }
 .player-row .meta { font-size: .75rem; color: #6d563d; }
 .won-tag { color: var(--sage-deep); font-weight: 800; font-size: .75rem; }
+.supply-delta {
+  display: inline-block; margin-left: .3rem; padding: 0 .35rem;
+  border-radius: 999px; font-weight: 800; font-size: .8rem; color: #fff;
+  animation: delta-flash 1000ms ease-out forwards;
+}
+.supply-delta.gain { background: var(--sage-deep); }
+.supply-delta.loss { background: var(--rust); }
+@keyframes delta-flash {
+  0% { transform: translateY(4px) scale(.7); opacity: 0; }
+  12% { transform: none; opacity: 1; }
+  85% { opacity: 1; }
+  100% { opacity: .35; }
+}
 
 #end-screen .panel { max-width: 640px; margin: 4vh auto; text-align: center; }
 .winner-list { display: grid; gap: .6rem; margin: 1rem 0; }
@@ -483,10 +512,10 @@ h1, h2, h3 { font-family: "Fraunces", Georgia, serif; margin: 0 0 .5rem; }
       <h3 id="turn-title">Your Turn</h3>
       <img class="portrait" id="turn-portrait" alt="" />
       <p id="turn-body" class="muted" style="margin:.35rem 0 .4rem;font-size:.9rem"></p>
-      <div class="dice-face" id="turn-dice" hidden>1</div>
       <div class="choice-btns">
         <button class="btn-primary" id="turn-roll" type="button">Roll Dice</button>
       </div>
+      <div class="dice-face pips" id="turn-dice" role="img" hidden></div>
     </div>
   </aside>
   <div class="board-wrap panel">
@@ -1089,7 +1118,7 @@ function renderPlayers() {
       <img src="${asset(p.character.img)}" alt="" />
       <div>
         <div class="name">${p.name}</div>
-        <div class="meta">${p.finished ? "Finished!" : `${p.supplies} supplies${p.skip ? ` · skip ${p.skip}` : ""}`}</div>
+        <div class="meta">${p.finished ? "Finished!" : `${p.supplies} supplies${supplyDeltaHtml(p)}${p.skip ? ` · skip ${p.skip}` : ""}`}</div>
       </div>
       <div>${p.finished ? `<span class="won-tag">Made it!</span>` : ""}</div>
     </div>`).join("");
@@ -1133,6 +1162,41 @@ async function prepareTurn() {
   await finishTurn();
 }
 
+// Cells of a 3x3 grid (0 = top-left, 8 = bottom-right) holding a pip for each face.
+const PIP_CELLS = {
+  1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8],
+  5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8]
+};
+
+function showDieFace(el, value, animClass) {
+  const on = PIP_CELLS[value] || [];
+  let html = "";
+  for (let i = 0; i < 9; i++) html += `<span class="pip${on.includes(i) ? " on" : ""}"></span>`;
+  el.innerHTML = html;
+  el.setAttribute("aria-label", `Die shows ${value}`);
+  el.classList.remove("tick", "land");
+  void el.offsetWidth;
+  if (animClass) el.classList.add(animClass);
+}
+
+// Decide result first, flash 10–14 decoy faces with ease-out delay, then land.
+async function animateDieRoll(el, finalValue) {
+  el.hidden = false;
+  const flashes = 10 + Math.floor(Math.random() * 5); // 10–14
+  let last = 0;
+  for (let i = 0; i < flashes; i++) {
+    let n = 1 + Math.floor(Math.random() * 6);
+    if (n === last) n = (n % 6) + 1;
+    showDieFace(el, n, "tick");
+    last = n;
+    const t = flashes === 1 ? 1 : i / (flashes - 1); // 0 → 1
+    const delay = Math.round(45 + 320 * t * t); // ~45ms → ~365ms
+    await sleep(delay);
+  }
+  showDieFace(el, finalValue, "land");
+  await sleep(280);
+}
+
 function openPlayerTurn(player, mode, titleOverride) {
   return new Promise(resolve => {
     $("turn-title").textContent = titleOverride ||
@@ -1155,9 +1219,12 @@ function openPlayerTurn(player, mode, titleOverride) {
       body.textContent = titleOverride ? "Roll the die again." : "Roll the die to move along the trail.";
       btn.textContent = "Roll Dice";
       let result = null;
-      btn.onclick = () => {
+      btn.onclick = async () => {
         if (result == null) {
+          btn.disabled = true;
+          btn.textContent = "Rolling…";
           const raw = 1 + Math.floor(Math.random() * 6);
+          await animateDieRoll(dice, raw);
           let move = raw;
           if (player.halfNext) {
             move = Math.floor(raw / 2);
@@ -1166,13 +1233,9 @@ function openPlayerTurn(player, mode, titleOverride) {
           } else {
             body.textContent = `Rolled ${move}. Move ${move} space${move === 1 ? "" : "s"}.`;
           }
-          dice.hidden = false;
-          dice.textContent = String(move);
-          dice.style.animation = "none";
-          void dice.offsetWidth;
-          dice.style.animation = "";
           result = move;
           btn.textContent = "Continue";
+          btn.disabled = false;
           return;
         }
         btn.disabled = true;
@@ -1319,16 +1382,41 @@ async function animateAlong(player, path) {
   renderPlayers();
 }
 
+const DELTA_SHOW_MS = 1000;
+
+/** Adjust supplies and flash a +N / -N label beside the count. */
+function changeSupplies(player, n) {
+  player.supplies += n;
+  const until = Date.now() + DELTA_SHOW_MS;
+  player.supplyDelta = { n, until };
+  renderPlayers();
+  setTimeout(() => {
+    if (player.supplyDelta && player.supplyDelta.until === until) {
+      player.supplyDelta = null;
+      renderPlayers();
+    }
+  }, DELTA_SHOW_MS);
+}
+
+function supplyDeltaHtml(p) {
+  const d = p.supplyDelta;
+  if (!d || Date.now() >= d.until) return "";
+  // Negative delay keeps the animation in step when the list re-renders mid-flash
+  const elapsed = DELTA_SHOW_MS - (d.until - Date.now());
+  const cls = d.n > 0 ? "gain" : "loss";
+  return ` <span class="supply-delta ${cls}" style="animation-delay:-${elapsed}ms">${d.n > 0 ? "+" : "−"}${Math.abs(d.n)}</span>`;
+}
+
 async function applyEffect(player, effect, { chain = true } = {}) {
   if (!effect) return;
   if (effect.gain) {
-    player.supplies += effect.gain;
+    changeSupplies(player, effect.gain);
     log(`${player.name} gains ${effect.gain} supply(ies).`);
   }
   if (effect.pay) {
     const cost = effect.pay;
     if (player.supplies >= cost) {
-      player.supplies -= cost;
+      changeSupplies(player, -cost);
       log(`${player.name} pays ${cost} supply(ies).`);
     } else {
       player.skip += 1;
@@ -1352,6 +1440,8 @@ async function applyEffect(player, effect, { chain = true } = {}) {
     const path = pathBack(player.pos, effect.back);
     log(`${player.name} goes back ${effect.back}.`);
     await animateAlong(player, path);
+    // Resolve the space they were sent back to, same as a bonus forward move
+    if (chain && path.length) await resolveTile(player, { fromMoveBonus: true });
   }
   if (effect.forward && chain) {
     const path = pathForward(player.pos, effect.forward);
