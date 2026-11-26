@@ -77,6 +77,9 @@ button:disabled { opacity: .45; cursor: not-allowed; transform: none; filter: no
   border: 2px solid rgba(92,61,34,.4);
   box-shadow: 0 6px 18px rgba(42,29,18,.22);
 }
+@media (max-width: 480px) {
+  .audio-toggles button { min-width: 0; padding: .45rem .7rem; font-size: .8rem; }
+}
 .audio-toggles button[aria-pressed="false"] {
   background: rgba(40, 28, 18, .72);
   color: var(--cream);
@@ -289,7 +292,7 @@ h1, h2, h3 { font-family: "Fraunces", Georgia, serif; margin: 0 0 .5rem; }
 /* Play layout */
 #play-screen.active {
   display: grid;
-  grid-template-columns: 300px 1fr;
+  grid-template-columns: clamp(220px, 22vw, 300px) minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
 }
@@ -355,6 +358,7 @@ h1, h2, h3 { font-family: "Fraunces", Georgia, serif; margin: 0 0 .5rem; }
   grid-template-columns: repeat(8, minmax(92px, 1fr));
   gap: 8px;
 }
+
 .row-gap {
   display: flex;
   align-items: flex-start;
@@ -422,10 +426,12 @@ h1, h2, h3 { font-family: "Fraunces", Georgia, serif; margin: 0 0 .5rem; }
 .tile.step-on { outline: 3px solid #d9783a; outline-offset: 2px; }
 .tile .label { font-weight: 800; color: var(--bark); margin-bottom: .2rem; font-size: .78rem; }
 .tokens {
-  position: absolute; right: 4px; bottom: 4px;
-  display: flex; gap: 3px; flex-wrap: wrap; justify-content: flex-end; max-width: 78%;
+  /* straddle the bottom edge so tokens sit below the tile text */
+  position: absolute; left: 4px; right: 4px; bottom: -15px;
+  display: flex; flex-wrap: nowrap; justify-content: flex-end;
   z-index: 3;
 }
+.tokens img + img { margin-left: -9px; }
 .tokens img {
   width: 28px; height: 28px; border-radius: 50%;
   border: 2px solid #fff;
@@ -437,6 +443,28 @@ h1, h2, h3 { font-family: "Fraunces", Georgia, serif; margin: 0 0 .5rem; }
 .tokens img.p1 { box-shadow: 0 0 0 2px #3f5e46; }
 .tokens img.p2 { box-shadow: 0 0 0 2px #6fa0c8; }
 .tokens img.p3 { box-shadow: 0 0 0 2px #8b5a2b; }
+/* Side-by-side layout: the board fills the window height and rows stretch to share it */
+@media (min-width: 981px) {
+  .board-wrap {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 2.5rem);
+    height: calc(100dvh - 2.5rem);
+    max-height: none;
+  }
+  .board { flex: 1 1 0; min-height: 0; min-width: 0; padding-top: 2.6rem; }
+  /* Each row gets an equal share of the height; tile text scales from that share (cqh) */
+  .board-row { flex: 1 1 0; min-height: 0; container-type: size; grid-template-columns: repeat(8, minmax(0, 1fr)); }
+  .row-gap { margin: 0; min-height: clamp(26px, 4.2vh, 46px); }
+  .tile {
+    min-height: 0;
+    font-size: clamp(9px, 9cqh, 20px);
+    padding: 1.7em .6em .5em;
+  }
+  .tile .label { font-size: 1.08em; }
+  .tile .flow { font-size: 1em; }
+  .tile.start, .tile.end { font-size: clamp(11px, 11cqh, 24px); padding-top: 1.7em; }
+}
 .flying-token {
   position: fixed;
   width: 28px; height: 28px; border-radius: 50%;
@@ -648,6 +676,7 @@ h1, h2, h3 { font-family: "Fraunces", Georgia, serif; margin: 0 0 .5rem; }
 <div class="audio-toggles">
   <button type="button" class="btn-ghost" id="sfx-toggle" aria-pressed="true" title="Mute sound effects">Sounds On</button>
   <button type="button" class="btn-ghost" id="music-toggle" aria-pressed="true" title="Mute music">Music On</button>
+  <button type="button" class="btn-ghost" id="fullscreen-toggle" aria-pressed="false" title="Enter fullscreen">Fullscreen Off</button>
 </div>
 <audio id="bg-music" src="assets/music/campfire-loop.mp3" loop preload="auto"></audio>
 <div id="title-screen" class="screen active">
@@ -871,8 +900,9 @@ const CHARACTERS = [
   }
 ];
 
-/** Board spaces in path order. stop=true means mandatory halt if you would pass it. */
-const BOARD = [
+/** Board spaces in path order. stop=true means mandatory halt if you would pass it.
+ *  Start, end and STOP spaces stay put; the rest are shuffled each game (see shuffleBoard). */
+const BOARD_LAYOUT = [
   { id:0,  name:"Start", text:"Start your journey.", kind:"start" },
   { id:1,  name:"River crossing", text:"Ford the river! Miss: pay 3 supplies or lose 1 turn.", kind:"choice",
     challenge:{ type:"ford", speed:0.9, zone:0.24 },
@@ -946,6 +976,7 @@ const BOARD = [
   { id:38, name:"Trade with Native Americans", text:"Gain 1 supply.", kind:"event", effect:{ gain:1 } },
   { id:39, name:"You made it!", text:"Trail’s end — welcome west!", kind:"end" }
 ];
+let BOARD = BOARD_LAYOUT;
 
 /** Trail Trivia asked at STOP landmarks. `a` is correct; `why` is shown after answering. */
 const TRIVIA = [
@@ -991,11 +1022,11 @@ const TRIVIA = [
     why:"Families traveled in groups for safety and to help each other." }
 ];
 
-/** Visual snake layout: 5 rows × 8 cols. Even rows L→R, odd rows R→L */
+/** Visual snake layout: 5 rows × 8 cols, heading west. Even rows R→L, odd rows L→R */
 function pathToRowCol(pathIndex) {
   const row = Math.floor(pathIndex / 8);
   const colInRow = pathIndex % 8;
-  const ltr = row % 2 === 0;
+  const ltr = row % 2 === 1;
   const col = ltr ? colInRow : 7 - colInRow;
   return { row, col, ltr };
 }
@@ -1135,6 +1166,36 @@ function initSfx() {
   document.addEventListener("pointerdown", () => audioCtx(), { once: true });
 }
 
+/* ----- Fullscreen ----- */
+function fullscreenElement() {
+  return document.fullscreenElement || document.webkitFullscreenElement || null;
+}
+
+function updateFullscreenButton() {
+  const btn = $("fullscreen-toggle");
+  const on = !!fullscreenElement();
+  btn.setAttribute("aria-pressed", on ? "true" : "false");
+  btn.title = on ? "Exit fullscreen" : "Enter fullscreen";
+  btn.textContent = on ? "Fullscreen On" : "Fullscreen Off";
+}
+
+function initFullscreen() {
+  const root = document.documentElement;
+  const request = root.requestFullscreen || root.webkitRequestFullscreen;
+  const exit = document.exitFullscreen || document.webkitExitFullscreen;
+  // Some browsers (e.g. iPhone Safari) can't go fullscreen; hide the button there.
+  if (!request || !exit) { $("fullscreen-toggle").hidden = true; return; }
+  updateFullscreenButton();
+  $("fullscreen-toggle").onclick = () => {
+    playSfx("pop");
+    const result = fullscreenElement() ? exit.call(document) : request.call(root);
+    if (result && result.catch) result.catch(() => {});
+  };
+  // Also catches leaving fullscreen with Esc
+  document.addEventListener("fullscreenchange", updateFullscreenButton);
+  document.addEventListener("webkitfullscreenchange", updateFullscreenButton);
+}
+
 function launchConfetti() {
   if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const colors = ["#b5522a", "#e8c97a", "#6b8f71", "#6fa0c8", "#d9783a", "#f2c94c"];
@@ -1180,6 +1241,13 @@ function shuffle(arr) {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
+}
+
+/** Keeps start, end and STOP spaces fixed and shuffles every other space between the open slots. */
+function shuffleBoard() {
+  const isFixed = t => t.kind === "start" || t.kind === "end" || t.stop;
+  const mixed = shuffle(BOARD_LAYOUT.filter(t => !isFixed(t)));
+  BOARD = BOARD_LAYOUT.map((t, i) => ({ ...(isFixed(t) ? t : mixed.shift()), id: i }));
 }
 
 function log(msg) {
@@ -1386,7 +1454,7 @@ function renderBoard() {
   const cols = 8;
   let html = "";
   for (let r = 0; r < rows; r++) {
-    const ltr = r % 2 === 0;
+    const ltr = r % 2 === 1;
     const indices = [];
     for (let c = 0; c < cols; c++) {
       const pathIndex = r * cols + c;
@@ -1423,6 +1491,7 @@ function beginGame() {
   state.current = 0;
   state.log = [];
   state.triviaDeck = [];
+  shuffleBoard();
   showScreen("play-screen");
   renderBoard();
   renderPlayers();
@@ -1603,12 +1672,12 @@ function tokenAnchorRect(tile, playerId) {
   const tr = tile.getBoundingClientRect();
   const size = 28;
   return {
-    left: tr.right - 8 - size,
-    top: tr.bottom - 8 - size,
+    left: tr.right - 6 - size,
+    top: tr.bottom + 13 - size,
     width: size,
     height: size,
-    right: tr.right - 8,
-    bottom: tr.bottom - 8
+    right: tr.right - 6,
+    bottom: tr.bottom + 13
   };
 }
 
@@ -2155,6 +2224,7 @@ $("btn-replay").onclick = () => { showScreen("title-screen"); };
 initArt();
 initMusic();
 initSfx();
+initFullscreen();
 resetParty();
 </script>
 </body>
