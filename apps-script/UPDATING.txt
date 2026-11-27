@@ -1,0 +1,64 @@
+HOW TO UPDATE THE GAME ON THE GOOGLE SITE
+==========================================
+
+Make your changes to game-src.html (or assets/) as usual first.
+GitHub Pages and the Google Site are updated separately. These steps cover
+only the Google Site.
+
+
+STEP 1. Build the Apps Script version
+-------------------------------------
+In Terminal, run:
+
+    cd ~/PioneerTrail
+    python3 apps-script/build.py
+
+It should print something like:
+
+    Wrote /Users/jbrunner/PioneerTrail/apps-script/Index.html (2.83 MB)
+
+If it stops with an error like "fullscreen check not found" or "music <audio>
+tag not found", the game code that build.py patches has changed, and
+build.py needs updating to match.
+
+
+STEP 2. Copy the built game to the clipboard
+--------------------------------------------
+In Terminal, run:
+
+    pbcopy < ~/PioneerTrail/apps-script/Index.html
+
+Nothing prints. The whole file is now on the clipboard.
+
+
+STEP 3. Paste it into the Apps Script project
+---------------------------------------------
+1. Go to script.google.com and open the Pioneer Trail project.
+2. Click Index.html in the file list on the left.
+3. Click in the editor, select all (Cmd+A), paste (Cmd+V), then save (Cmd+S).
+   The file is large, so the editor may freeze for a few seconds.
+4. Leave Code.gs alone. It doesn't change.
+
+
+STEP 4. Publish a new version
+-----------------------------
+1. Deploy > Manage deployments.
+2. Click the pencil (edit) icon on the existing web app deployment.
+3. Version: choose "New version".
+4. Click Deploy.
+
+Do NOT use "New deployment". That creates a new /exec URL, and the Site
+would still show the old game.
+
+
+THINGS TO UPDATE IN THE SITE
+============================
+[ ] Index.html in Apps Script: pasted in the new build and saved
+[ ] Apps Script deployment: edited to "New version" (same /exec URL)
+[ ] /exec URL: opened in a new tab to check the new version loads
+[ ] Google Site embed: nothing to change, because the URL stays the same.
+    Only edit it if the frame size needs adjusting (keep it tall).
+[ ] Google Site: Preview, then Publish, but only if you changed anything
+    on the Site itself
+[ ] Quick check on the live Site: title screen loads, music and sound
+    toggles work, and the game fits without scrolling inside the frame
