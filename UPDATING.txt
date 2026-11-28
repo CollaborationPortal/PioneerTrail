@@ -1,6 +1,6 @@
-    cd ~/PioneerTrail
+    cd ~/HistoryGames/PioneerTrail
     python3 apps-script/build.py
-    pbcopy < ~/PioneerTrail/apps-script/Index.html
+    pbcopy < ~/HistoryGames/PioneerTrail/apps-script/Index.html
 
 
 1. Deploy > Manage deployments.
