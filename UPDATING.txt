@@ -1,3 +1,16 @@
+    cd ~/PioneerTrail
+    python3 apps-script/build.py
+    pbcopy < ~/PioneerTrail/apps-script/Index.html
+
+
+1. Deploy > Manage deployments.
+2. Click the pencil (edit) icon on the existing web app deployment.
+3. Version: choose "New version".
+4. Click Deploy.
+
+Do NOT use "New deployment". That creates a new /exec URL, and the Site
+would still show the old game.
+
 HOW TO UPDATE THE GAME ON THE GOOGLE SITE
 ==========================================
 
